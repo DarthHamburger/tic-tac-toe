@@ -22,6 +22,8 @@ import java.awt.image.BufferedImage;
 
 import javax.swing.JFrame;
 
+import core.DeveloperSettings;
+
 /** Handles the rendering thread.
  * @author Bryan Charles Bettis
  */
@@ -29,6 +31,10 @@ public class GfxManager extends core.Subsystem
 {
 	/** The default interval for rendering. */
 	public static final int DEFAULT_RENDER_INTERVAL = 16;
+	/** The index of the top layer. */
+	public static final int TOP_LAYER_INDEX =
+			(int)
+			DeveloperSettings.getSetting("NUM_MAIN_LAYERS") - 1;
 	
 	/** The main window frame. */
 	private static JFrame mainWin;
@@ -39,7 +45,7 @@ public class GfxManager extends core.Subsystem
 	/** The current average FPS. */
 	private static double FPS;
 	
-	/** Normal graphics renderer setup. */
+	/** Normal graphics system setup. */
 	public GfxManager()
 	{
 		super(DEFAULT_RENDER_INTERVAL, "Graphics Manager Render Loop");
@@ -48,11 +54,12 @@ public class GfxManager extends core.Subsystem
 		mainWin = new JFrame("Unnamed Java Game Engine");
 		// Setup the main layer container
 		Integer numMainLayers =
-				(Integer) core.DeveloperSettings.getSetting("NUM_MAIN_LAYERS");
-		Dimension mainWinDims =
-				(Dimension) core.DeveloperSettings.getSetting(
-						"INIT_MAIN_WIN_DIMS"
-						);
+				(Integer) DeveloperSettings.getSetting("NUM_MAIN_LAYERS");
+		int width = 
+				(int) DeveloperSettings.getSetting("INIT_MAIN_WIN_WIDTH");
+		int height = 
+				(int) DeveloperSettings.getSetting("INIT_MAIN_WIN_HEIGHT");
+		Dimension mainWinDims = new Dimension(width, height);
 		mainLayers = new MainLayerSetContainer(mainWin, mainWinDims, numMainLayers);
 		mainWin.add(mainLayers);
 		// Create the graphics resource manager
@@ -70,6 +77,7 @@ public class GfxManager extends core.Subsystem
 	@Override
 	public boolean runCycle()
 	{
+		// TODO Make FPS calculation actually reflect FPS
 		FPS = clock.getAvgCPS();
 		mainWin.repaint(16);
 		return true;
@@ -102,18 +110,11 @@ public class GfxManager extends core.Subsystem
 	/** Gets the main layer set, which is drawn to the screen. To be able to
 	 * draw to the screen, a subclass of Renderer (LayerSet, your own
 	 * subclasses, etc.) must be added to this layer set, or to a different
-	 * Renderer container (LayerSet, etc.) that has been/will be added to
+	 * Renderer "container" (LayerSet, etc.) that has been/will be added to
 	 * this main layer set.
 	 * <br>
-	 * <br>For the primary window, there are 10 layers.
-	 * They "could" be used as follows:
-	 * <br>
-	 * <br>0-2: Background Layers
-	 * <br>3-6: Main Content Layers
-	 * <br>7-9: GUI Layers
-	 * <br>
-	 * <br>What you use each layer for is up to you, but setting your own
-	 * standard usage for a game, like above for example, is recommended.
+	 * <br>The number of layers in this layer set is specified in
+	 * DeveloperSettings, as the setting "NUM_MAIN_LAYERS".
 	 * @return the LayerSet for the main drawing layers
 	 */
 	public static LayerSet getMainLayerSet()
@@ -121,24 +122,11 @@ public class GfxManager extends core.Subsystem
 		return mainLayers.getLayerSet();
 	}
 	
-	/** Draws a BufferedImage to the specified context.
-	 * @param g the Graphics2D to draw the image to
-	 * @param i the image to draw
-	 * @param x the x coordinate of the left side
-	 * @param y the y coordinate of the top side
-	 * @param width the width to draw the image as
-	 * @param height the height to draw the image as
-	 */
-	public static void drawGraphic(Graphics2D g, BufferedImage i, int x, int y, int width, int height)
-	{
-		g.drawImage(i,x,y,width,height,null);
-	}
-	
-	/** Draws a pre-loaded image to the specified context.
-	 * @param g the Graphics2D to draw the image to
+	/** Draws a pre-loaded image to the specified graphics context.
+	 * @param g the Graphics2D context to draw the image to
 	 * @param name the "pre-loaded name" of the image to draw
-	 * @param x the x coordinate of the left side
-	 * @param y the y coordinate of the top side
+	 * @param x the x coordinate of the top left corner
+	 * @param y the y coordinate of the top left corner
 	 * @param width the width to draw the image as
 	 * @param height the height to draw the image as
 	 */
@@ -146,33 +134,34 @@ public class GfxManager extends core.Subsystem
 	{
 		BufferedImage img;
 		img = core.graphics.GfxManager.getResManager().getRes(name);
-		drawGraphic(g,img,x-6,y-6,12,12);
+		drawGraphic(g,img,x,y,width,height);
 	}
 	
-	/** Shows the specified Renderer on the specified layer.
-	 * @param obj the Renderer to show
-	 * @param layer the layer to show on
+	/** Draws a pre-loaded image to the specified context, without resizing
+	 * the image.
+	 * @param g the Graphics2D context to draw the image to
+	 * @param name the "pre-loaded name" of the image to draw
+	 * @param x the x coordinate of the top left corner
+	 * @param y the y coordinate of the top left corner
 	 */
-	public static synchronized void showRenderer(PrimaryRenderer obj, int layer)
+	public static void drawGraphic(Graphics2D g, String name, int x, int y)
 	{
-		mainLayers.getLayerSet().addRenderer(obj, layer);
+		BufferedImage img;
+		img = core.graphics.GfxManager.getResManager().getRes(name);
+		drawGraphic(g,img,x,y,img.getWidth(),img.getHeight());
 	}
 	
-	/** Hide (remove) the specified renderer from the specified layer.
-	 * @param obj the Renderer to hide
-	 * @param layer the layer to hide on
+	/** Draws a BufferedImage to the specified context.
+	 * @param g the Graphics2D context to draw the image to
+	 * @param i the image to draw
+	 * @param x the x coordinate of the top left corner
+	 * @param y the y coordinate of the top left corner
+	 * @param width the width to draw the image as
+	 * @param height the height to draw the image as
 	 */
-	public static synchronized void hideRenderer(PrimaryRenderer obj, int layer)
+	public static void drawGraphic(Graphics2D g, BufferedImage i, int x, int y, int width, int height)
 	{
-		mainLayers.getLayerSet().removeRenderer(obj, layer);
-	}
-	
-	/** Hide (remove) the specified renderer from all layers.
-	 * @param obj the Renderer to hide
-	 */
-	public static synchronized void hideRenderer(PrimaryRenderer obj)
-	{
-		mainLayers.getLayerSet().removeRenderer(obj);
+		g.drawImage(i,x,y,width,height,null);
 	}
 	
 	/** Clears all graphics data, like each Renderer, etc. */

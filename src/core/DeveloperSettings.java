@@ -15,15 +15,38 @@
 
 package core;
 
-import java.awt.Dimension;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Contains different settings that a developer can safely modify without
- * damaging the game engine's systems.
+ * hindering or breaking the game engine's systems.  However, these settings
+ * cannot safely be changed once the program has been started up. The core engine
+ * settings have string constants provided for them as public constants.
  * @author Bryan Charles Bettis
  */
 public class DeveloperSettings
 {
+	/** How many layers to setup in the main layer set.
+	 * <br>
+	 * <br> <i>Type:</i> integer greater than 0
+	 */
+	public static final String NUM_MAIN_LAYERS = "NUM_MAIN_LAYERS";
+	/** The initial width of the game window.
+	 * <br>
+	 * <br> <i>Type:</i> integer greater than 0
+	 * (scroll down is positive)
+	 */
+	public static final String INIT_MAIN_WIN_WIDTH = "INIT_MAIN_WIN_WIDTH";
+	/** The initial height of the game window.
+	 * <br>
+	 * <br> <i>Type:</i> greater than 0
+	 */
+	public static final String INIT_MAIN_WIN_HEIGHT = "INIT_MAIN_WIN_HEIGHT";
+	/** The GameState subclass to use when first starting up the game engine.
+	 * <br>
+	 * <br> <i>Type:</i> a class (for example, game.gamestates.MainMenu.class)
+	 */
+	public static final String INIT_GAME_STATE = "INIT_GAME_STATE";
+	
 	/** The map of the different developer settings. */
 	protected static volatile ConcurrentHashMap<String, Object> settings;
 	
@@ -34,13 +57,22 @@ public class DeveloperSettings
 		setupSettings();
 	}
 	
-	/** Setup the initial developer settings. */
+	/** Setup the initial developer settings. Note that once a developer
+	 * setting has been added, it cannot (and should not) be changed
+	 * during runtime. If developers want to add a setting that can
+	 * be modified during runtime, they should add it to the
+	 * DynamicSettings class.
+	 */
 	private static void setupSettings()
 	{
 		// The number of layers in the main layer set
 		settings.put("NUM_MAIN_LAYERS", 10);
-		// The initial dimensions of the main window
-		settings.put("INIT_MAIN_WIN_DIMS", new Dimension(480,270));
+		// The initial width of the main window
+		settings.put("INIT_MAIN_WIN_WIDTH", 480);
+		// The initial height of the main window
+		settings.put("INIT_MAIN_WIN_HEIGHT", 270);
+		// The game state to use when the game first starts
+		settings.put("INIT_GAME_STATE", game.gamestate.MainMenu.class);
 	}
 	
 	/** Gets the specified developer setting, or returns null if the
@@ -67,25 +99,5 @@ public class DeveloperSettings
 			Thread.dumpStack();
 		}
 		return obj;
-	}
-	
-	/** Changes or adds a developer setting.
-	 * <br>
-	 * <b>WARNING:</b> changing developer settings from another class
-	 * IS allowed, however it is very risky as most of these settings
-	 * are used to initialize core game engine components and could cause
-	 * errors/exceptions during runtime.
-	 * @param name the name of the setting to change/add
-	 * @param setting the new value of the setting
-	 */
-	public static void setSetting(String name, Object setting)
-	{
-		System.out.println(
-				"WARNING: Developer setting \'"
-						+ name
-						+ "\' is being added/changed after initial setup. "
-						+ "This could cause unpredictable behavior."
-						);
-		settings.put(name, setting);
 	}
 }
